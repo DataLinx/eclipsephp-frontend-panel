@@ -4,7 +4,7 @@ namespace Eclipse\Frontend;
 
 use Eclipse\Common\Foundation\Providers\PackageServiceProvider;
 use Eclipse\Common\Package;
-use Spatie\LaravelPackageTools\Package as SpatiePackage;;
+use Spatie\LaravelPackageTools\Package as SpatiePackage;
 
 class FrontendPanelServiceProvider extends PackageServiceProvider
 {
