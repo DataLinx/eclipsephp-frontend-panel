@@ -1,5 +1,5 @@
 {
-    "name": "eclipsephp/plugin-template",
+    "name": "eclipsephp/frontend-panel",
     "require": {
         "wikimedia/composer-merge-plugin": "dev-master"
     },
@@ -12,7 +12,7 @@
         },
         "laravel": {
             "providers": [
-                "Eclipse\\PluginTemplate\\PluginTemplateServiceProvider"
+                "FrontendPanelServiceProvider"
             ]
         }
     },
@@ -25,9 +25,9 @@
     },
     "autoload": {
         "psr-4": {
-            "Eclipse\\PluginTemplate\\": "src/",
-            "Eclipse\\PluginTemplate\\Factories\\": "database/factories/",
-            "Eclipse\\PluginTemplate\\Seeders\\": "database/seeders/"
+            "Eclipse\\Frontend\\": "src/",
+            "Eclipse\\Frontend\\Factories\\": "database/factories/",
+            "Eclipse\\Frontend\\Seeders\\": "database/seeders/"
         }
     },
     "autoload-dev": {

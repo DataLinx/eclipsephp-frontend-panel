@@ -1,15 +1,15 @@
 <?php
 
-namespace Eclipse\PluginTemplate;
+namespace Eclipse\Frontend;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 
-class PluginTemplate implements Plugin
+class FrontendPanel implements Plugin
 {
     public function getId(): string
     {
-        return 'plugin-template';
+        return 'frontend-panel';
     }
 
     public function register(Panel $panel): void

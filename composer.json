@@ -1,12 +1,13 @@
 {
-    "name": "eclipsephp/plugin-template",
-    "description": "Eclipse template for Filament plugins",
+    "name": "eclipsephp/frontend-panel",
+    "description": "Frontend panel for Eclipse",
     "keywords": [
         "eclipse",
         "filament",
-        "laravel"
+        "laravel",
+        "frontend"
     ],
-    "homepage": "https://github.com/DataLinx/eclipsephp-plugin-template",
+    "homepage": "https://github.com/DataLinx/eclipsephp-frontend-panel",
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -26,9 +27,9 @@
     "prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "Eclipse\\PluginTemplate\\": "src/",
-            "Eclipse\\PluginTemplate\\Factories\\": "database/factories/",
-            "Eclipse\\PluginTemplate\\Seeders\\": "database/seeders/"
+            "Eclipse\\Frontend\\": "src/",
+            "Eclipse\\Frontend\\Factories\\": "database/factories/",
+            "Eclipse\\Frontend\\Seeders\\": "database/seeders/"
         }
     },
     "autoload-dev": {
@@ -43,6 +44,7 @@
         "php": "^8.2",
         "bezhansalleh/filament-shield": "^3.3",
         "datalinx/php-utils": "^2.5",
+        "eclipsephp/common": "dev-main",
         "filament/filament": "^3.3",
         "spatie/laravel-package-tools": "^1.19"
     },
@@ -78,7 +80,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Eclipse\\PluginTemplate\\PluginTemplateServiceProvider"
+                "Eclipse\\Frontend\\FrontendPanelServiceProvider"
             ]
         }
     }
