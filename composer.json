@@ -80,7 +80,7 @@
     "extra": {
         "laravel": {
             "providers": [
-              "Eclipse\\Frontend\\FrontendServiceProvider"
+                "Eclipse\\Frontend\\FrontendServiceProvider"
             ]
         }
     }
