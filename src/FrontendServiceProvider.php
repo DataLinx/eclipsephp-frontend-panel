@@ -4,9 +4,10 @@ namespace Eclipse\Frontend;
 
 use Eclipse\Common\Foundation\Providers\PackageServiceProvider;
 use Eclipse\Common\Package;
+use Eclipse\Frontend\Providers\FrontendPanelProvider;
 use Spatie\LaravelPackageTools\Package as SpatiePackage;
 
-class FrontendPanelServiceProvider extends PackageServiceProvider
+class FrontendServiceProvider extends PackageServiceProvider
 {
     public static string $name = 'frontend-panel';
 
@@ -15,5 +16,14 @@ class FrontendPanelServiceProvider extends PackageServiceProvider
         $package->name(static::$name)
             ->hasConfigFile()
             ->hasTranslations();
+    }
+
+    public function register(): self
+    {
+        parent::register();
+
+        $this->app->register(FrontendPanelProvider::class);
+
+        return $this;
     }
 }
