@@ -76,18 +76,4 @@ class FrontendPanelProvider extends PanelProvider
         parent::register();
         FilamentView::registerRenderHook('panels::body.end', fn (): string => Blade::render("@vite('resources/js/app.js')"));
     }
-
-    private static function getThemeIsolationScript(string $panelId): string
-    {
-        return "<script>
-            ['setItem', 'getItem'].forEach(method => {
-                localStorage[method] = new Proxy(localStorage[method], {
-                    apply(target, thisArg, args) {
-                        if (args[0] === 'theme') args[0] = 'theme_{$panelId}';
-                        return target.apply(thisArg, args);
-                    }
-                });
-            });
-        </script>";
-    }
 }
