@@ -24,13 +24,16 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use pxlrbt\FilamentEnvironmentIndicator\EnvironmentIndicatorPlugin;
+use Filament\View\PanelsRenderHook;
 
 class FrontendPanelProvider extends PanelProvider
 {
+    private const PANEL_ID = 'frontend';
+
     public function panel(Panel $panel): Panel
     {
         return $panel
-            ->id('frontend')
+            ->id(self::PANEL_ID)
             ->path('')
             ->login()
             ->passwordReset()
@@ -40,7 +43,7 @@ class FrontendPanelProvider extends PanelProvider
                 'gray' => Color::Slate,
             ])
             ->topNavigation()
-            ->brandName(fn () => Registry::getSite()->name)
+            ->brandName(fn() => Registry::getSite()->name)
             ->discoverResources(in: app_path('Filament/Frontend/Resources'), for: 'App\\Filament\\Frontend\\Resources')
             ->discoverPages(in: app_path('Filament/Frontend/Pages'), for: 'App\\Filament\\Frontend\\Pages')
             ->pages([
@@ -67,7 +70,7 @@ class FrontendPanelProvider extends PanelProvider
             ])
             ->globalSearch(GlobalSearchProvider::class)
             ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
-            ->globalSearchFieldSuffix(fn (): ?string => match (Platform::detect()) {
+            ->globalSearchFieldSuffix(fn(): ?string => match (Platform::detect()) {
                 Platform::Windows, Platform::Linux => 'CTRL+K',
                 Platform::Mac => '⌘K',
                 default => null,
@@ -77,13 +80,31 @@ class FrontendPanelProvider extends PanelProvider
             ->tenantMenu(false)
             ->plugins([
                 EnvironmentIndicatorPlugin::make(),
-            ]);
+            ])
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_END,
+                fn(): string => self::getThemeIsolationScript(self::PANEL_ID)
+            );
     }
 
     public function register(): void
     {
         parent::register();
 
-        FilamentView::registerRenderHook('panels::body.end', fn (): string => Blade::render("@vite('resources/js/app.js')"));
+        FilamentView::registerRenderHook('panels::body.end', fn(): string => Blade::render("@vite('resources/js/app.js')"));
+    }
+
+    private static function getThemeIsolationScript(string $panelId): string
+    {
+        return "<script>
+            ['setItem', 'getItem'].forEach(method => {
+                localStorage[method] = new Proxy(localStorage[method], {
+                    apply(target, thisArg, args) {
+                        if (args[0] === 'theme') args[0] = 'theme_{$panelId}';
+                        return target.apply(thisArg, args);
+                    }
+                });
+            });
+        </script>";
     }
 }
