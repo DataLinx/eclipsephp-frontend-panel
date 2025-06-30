@@ -5,6 +5,8 @@ namespace Eclipse\Frontend\Providers;
 use Eclipse\Common\Providers\GlobalSearchProvider;
 use Eclipse\Core\Models\Site;
 use Eclipse\Core\Services\Registry;
+use Eclipse\Frontend\Filament\Pages\Auth\Login;
+use Eclipse\Frontend\Http\Middleware\RedirectAfterLogin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -35,7 +37,7 @@ class FrontendPanelProvider extends PanelProvider
         return $panel
             ->id(self::PANEL_ID)
             ->path('')
-            ->login()
+            ->login(Login::class)
             ->passwordReset()
             ->emailVerification()
             ->colors([
@@ -65,6 +67,7 @@ class FrontendPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                RedirectAfterLogin::class
             ])
             ->authMiddleware([
                 Authenticate::class,
@@ -83,9 +86,10 @@ class FrontendPanelProvider extends PanelProvider
                 EnvironmentIndicatorPlugin::make(),
             ])
             ->renderHook(
-                PanelsRenderHook::TOPBAR_END,
+                PanelsRenderHook::HEAD_START,
                 fn(): string => self::getThemeIsolationScript(self::PANEL_ID)
-            );
+            )
+            ;
     }
 
     public function register(): void
