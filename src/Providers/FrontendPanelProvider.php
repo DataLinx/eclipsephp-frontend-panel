@@ -42,6 +42,7 @@ class FrontendPanelProvider extends PanelProvider
                 'primary' => Color::Cyan,
                 'gray' => Color::Slate,
             ])
+            ->authGuard(self::PANEL_ID)
             ->topNavigation()
             ->brandName(fn() => Registry::getSite()->name)
             ->discoverResources(in: app_path('Filament/Frontend/Resources'), for: 'App\\Filament\\Frontend\\Resources')
