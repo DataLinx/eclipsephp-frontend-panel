@@ -5,6 +5,8 @@ namespace Eclipse\Frontend\Providers;
 use Eclipse\Common\Providers\GlobalSearchProvider;
 use Eclipse\Core\Models\Site;
 use Eclipse\Core\Services\Registry;
+use Eclipse\Frontend\Filament\Pages\Auth\Login;
+use Eclipse\Frontend\Http\Middleware\RedirectAfterLogin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -24,23 +26,27 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use pxlrbt\FilamentEnvironmentIndicator\EnvironmentIndicatorPlugin;
+use Filament\View\PanelsRenderHook;
 
 class FrontendPanelProvider extends PanelProvider
 {
+    private const PANEL_ID = 'frontend';
+
     public function panel(Panel $panel): Panel
     {
         return $panel
-            ->id('frontend')
+            ->id(self::PANEL_ID)
             ->path('')
-            ->login()
+            ->login(Login::class)
             ->passwordReset()
             ->emailVerification()
             ->colors([
                 'primary' => Color::Cyan,
                 'gray' => Color::Slate,
             ])
+            ->authGuard(self::PANEL_ID)
             ->topNavigation()
-            ->brandName(fn () => Registry::getSite()->name)
+            ->brandName(fn() => Registry::getSite()->name)
             ->discoverResources(in: app_path('Filament/Frontend/Resources'), for: 'App\\Filament\\Frontend\\Resources')
             ->discoverPages(in: app_path('Filament/Frontend/Pages'), for: 'App\\Filament\\Frontend\\Pages')
             ->pages([
@@ -61,13 +67,14 @@ class FrontendPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                RedirectAfterLogin::class
             ])
             ->authMiddleware([
                 Authenticate::class,
             ])
             ->globalSearch(GlobalSearchProvider::class)
             ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
-            ->globalSearchFieldSuffix(fn (): ?string => match (Platform::detect()) {
+            ->globalSearchFieldSuffix(fn(): ?string => match (Platform::detect()) {
                 Platform::Windows, Platform::Linux => 'CTRL+K',
                 Platform::Mac => '⌘K',
                 default => null,
@@ -77,13 +84,32 @@ class FrontendPanelProvider extends PanelProvider
             ->tenantMenu(false)
             ->plugins([
                 EnvironmentIndicatorPlugin::make(),
-            ]);
+            ])
+            ->renderHook(
+                PanelsRenderHook::HEAD_START,
+                fn(): string => self::getThemeIsolationScript(self::PANEL_ID)
+            )
+            ;
     }
 
     public function register(): void
     {
         parent::register();
 
-        FilamentView::registerRenderHook('panels::body.end', fn (): string => Blade::render("@vite('resources/js/app.js')"));
+        FilamentView::registerRenderHook('panels::body.end', fn(): string => Blade::render("@vite('resources/js/app.js')"));
+    }
+
+    private static function getThemeIsolationScript(string $panelId): string
+    {
+        return "<script>
+            ['setItem', 'getItem'].forEach(method => {
+                localStorage[method] = new Proxy(localStorage[method], {
+                    apply(target, thisArg, args) {
+                        if (args[0] === 'theme') args[0] = 'theme_{$panelId}';
+                        return target.apply(thisArg, args);
+                    }
+                });
+            });
+        </script>";
     }
 }
