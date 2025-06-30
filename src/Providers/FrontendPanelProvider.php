@@ -5,19 +5,19 @@ namespace Eclipse\Frontend\Providers;
 use Eclipse\Common\Providers\GlobalSearchProvider;
 use Eclipse\Core\Models\Site;
 use Eclipse\Core\Services\Registry;
+use Eclipse\Frontend\Filament\Pages as CustomPages;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
-use Filament\Pages;
-use Eclipse\Frontend\Filament\Pages as CustomPages;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Platform;
 use Filament\Support\Facades\FilamentView;
-use Filament\Widgets;
 use Filament\View\PanelsRenderHook;
+use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -42,25 +42,20 @@ class FrontendPanelProvider extends PanelProvider
             ])
             ->authGuard(self::PANEL_ID)
             ->topNavigation()
-            ->brandName(fn() => Registry::getSite()->name)
+            ->brandName(fn () => Registry::getSite()->name)
             ->discoverResources(in: app_path('Filament/Frontend/Resources'), for: 'App\\Filament\\Frontend\\Resources')
             ->discoverPages(in: app_path('Filament/Frontend/Pages'), for: 'App\\Filament\\Frontend\\Pages')
             ->discoverWidgets(in: app_path('Filament/Frontend/Widgets'), for: 'App\\Filament\\Frontend\\Widgets')
-            ->widgets([])
             ->globalSearch(GlobalSearchProvider::class)
             ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
-            ->globalSearchFieldSuffix(fn(): ?string => match (Platform::detect()) {
+            ->globalSearchFieldSuffix(fn (): ?string => match (Platform::detect()) {
                 Platform::Windows, Platform::Linux => 'CTRL+K',
                 Platform::Mac => '⌘K',
                 default => null,
             })
             ->plugins([
                 EnvironmentIndicatorPlugin::make(),
-            ])
-            ->renderHook(
-                PanelsRenderHook::TOPBAR_END,
-                fn() => view('frontend-panel::filament.components.theme-switcher')
-            );
+            ]);
 
         $middleware = [
             EncryptCookies::class,
@@ -73,7 +68,7 @@ class FrontendPanelProvider extends PanelProvider
             DispatchServingFilamentEvent::class,
         ];
 
-        match (self::isGuestPanel()) {
+        $middleware = match (self::isGuestPanel()) {
             true => $middleware,
             false => array_merge($middleware, [
                 AuthenticateSession::class,
@@ -89,7 +84,7 @@ class FrontendPanelProvider extends PanelProvider
                 ->middleware($middleware)
                 ->renderHook(
                     PanelsRenderHook::TOPBAR_END,
-                    fn(): string => self::getThemeIsolationScript(self::PANEL_ID)
+                    fn () => view('frontend-panel::filament.components.theme-switcher')
                 ),
             false => $panel->login()
                 ->passwordReset()
@@ -109,8 +104,8 @@ class FrontendPanelProvider extends PanelProvider
                 ->tenantDomain('{tenant:domain}')
                 ->tenantMenu(false)
                 ->renderHook(
-                    PanelsRenderHook::TOPBAR_END,
-                    fn() => view('frontend-panel::filament.components.theme-switcher')
+                    PanelsRenderHook::HEAD_START,
+                    fn (): string => self::getThemeIsolationScript(self::PANEL_ID)
                 )
         };
 
@@ -120,7 +115,7 @@ class FrontendPanelProvider extends PanelProvider
     public function register(): void
     {
         parent::register();
-        FilamentView::registerRenderHook('panels::body.end', fn(): string => Blade::render("@vite('resources/js/app.js')"));
+        FilamentView::registerRenderHook('panels::body.end', fn (): string => Blade::render("@vite('resources/js/app.js')"));
     }
 
     private static function getThemeIsolationScript(string $panelId): string
@@ -139,6 +134,6 @@ class FrontendPanelProvider extends PanelProvider
 
     private static function isGuestPanel(): bool
     {
-        return config('eclipse.guest_panel');
+        return config('frontend-panel.guest_access');
     }
 }
