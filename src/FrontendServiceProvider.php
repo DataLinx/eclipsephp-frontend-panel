@@ -16,7 +16,8 @@ class FrontendServiceProvider extends PackageServiceProvider
         $package->name(static::$name)
             ->hasConfigFile()
             ->hasTranslations()
-            ->hasViews();
+            ->hasViews()
+            ->hasSettings();
     }
 
     public function register(): self
