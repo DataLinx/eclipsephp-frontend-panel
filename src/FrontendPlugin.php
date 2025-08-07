@@ -4,7 +4,4 @@ namespace Eclipse\Frontend;
 
 use Eclipse\Common\Foundation\Plugins\Plugin;
 
-class FrontendPlugin extends Plugin
-{
-
-}
+class FrontendPlugin extends Plugin {}
