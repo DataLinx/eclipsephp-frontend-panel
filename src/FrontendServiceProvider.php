@@ -24,8 +24,21 @@ class FrontendServiceProvider extends PackageServiceProvider
     {
         parent::register();
 
-        $this->app->register(FrontendPanelProvider::class);
+        if ($this->isFrontendRequest()) {
+            $this->app->register(FrontendPanelProvider::class);
+        }
 
         return $this;
+    }
+
+    public function isFrontendRequest(): bool
+    {
+        $uri = explode('/', trim(request()->getRequestUri(), '/'));
+
+        if (count($uri) > 0 && $uri[0] === 'admin') {
+            return false;
+        }
+
+        return true;
     }
 }
