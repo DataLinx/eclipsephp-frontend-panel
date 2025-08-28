@@ -2,6 +2,7 @@
 
 namespace Eclipse\Frontend\Providers;
 
+use BezhanSalleh\FilamentShield\Middleware\SyncShieldTenant;
 use Eclipse\Common\Providers\GlobalSearchProvider;
 use Eclipse\Core\Models\Site;
 use Eclipse\Core\Services\Registry;
@@ -33,30 +34,6 @@ class FrontendPanelProvider extends PanelProvider
 
     public function panel(Panel $panel): Panel
     {
-        $panel = $panel
-            ->id(self::PANEL_ID)
-            ->path('')
-            ->colors([
-                'primary' => Color::Cyan,
-                'gray' => Color::Slate,
-            ])
-            ->authGuard(self::PANEL_ID)
-            ->topNavigation()
-            ->brandName(fn () => Registry::getSite()->name)
-            ->discoverResources(in: app_path('Filament/Frontend/Resources'), for: 'App\\Filament\\Frontend\\Resources')
-            ->discoverPages(in: app_path('Filament/Frontend/Pages'), for: 'App\\Filament\\Frontend\\Pages')
-            ->discoverWidgets(in: app_path('Filament/Frontend/Widgets'), for: 'App\\Filament\\Frontend\\Widgets')
-            ->globalSearch(GlobalSearchProvider::class)
-            ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
-            ->globalSearchFieldSuffix(fn (): ?string => match (Platform::detect()) {
-                Platform::Windows, Platform::Linux => 'CTRL+K',
-                Platform::Mac => '⌘K',
-                default => null,
-            })
-            ->plugins([
-                EnvironmentIndicatorPlugin::make(),
-            ]);
-
         $middleware = [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
@@ -68,41 +45,66 @@ class FrontendPanelProvider extends PanelProvider
             DispatchServingFilamentEvent::class,
         ];
 
-        $middleware = match (self::isGuestPanel()) {
-            true => $middleware,
-            false => array_merge($middleware, [
-                AuthenticateSession::class,
+        $widgets = [];
+        $pages = [];
+
+        if (self::isGuestPanel()) {
+            $middleware[] = AuthenticateSession::class;
+            $pages[] = CustomPages\Home::class;
+        } else {
+            $widgets = array_merge($widgets, [
+                Widgets\AccountWidget::class,
+                Widgets\FilamentInfoWidget::class,
+            ]);
+            $pages[] = Pages\Dashboard::class;
+        }
+
+        $panel
+            ->id(self::PANEL_ID)
+            ->path('')
+            ->login()
+            ->passwordReset()
+            ->emailVerification()
+            ->colors([
+                'primary' => Color::Cyan,
+                'gray' => Color::Slate,
             ])
-        };
+            ->authGuard(self::PANEL_ID)
+            ->topNavigation()
+            ->brandName(fn () => Registry::getSite()->name)
+            ->discoverResources(in: app_path('Filament/Frontend/Resources'), for: 'App\\Filament\\Frontend\\Resources')
+            ->discoverPages(in: app_path('Filament/Frontend/Pages'), for: 'App\\Filament\\Frontend\\Pages')
+            ->discoverWidgets(in: app_path('Filament/Frontend/Widgets'), for: 'App\\Filament\\Frontend\\Widgets')
+            ->pages($pages)
+            ->globalSearch(GlobalSearchProvider::class)
+            ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
+            ->globalSearchFieldSuffix(fn (): ?string => match (Platform::detect()) {
+                Platform::Windows, Platform::Linux => 'CTRL+K',
+                Platform::Mac => '⌘K',
+                default => null,
+            })
+            ->tenant(Site::class, slugAttribute: 'domain')
+            ->tenantDomain('{tenant:domain}')
+            ->tenantMiddleware([
+                SyncShieldTenant::class,
+            ], isPersistent: true)
+            ->tenantMenu(false)
+            ->widgets($widgets)
+            ->middleware($middleware)
+            ->plugins(array_merge([
+                EnvironmentIndicatorPlugin::make(),
+            ], app(Registry::class)->getPlugins()));
 
         match (self::isGuestPanel()) {
             true => $panel
-                ->pages([
-                    CustomPages\Home::class,
-                ])
-                ->widgets([])
-                ->middleware($middleware)
                 ->renderHook(
                     PanelsRenderHook::TOPBAR_END,
                     fn () => view('frontend-panel::filament.components.theme-switcher')
                 ),
-            false => $panel->login()
-                ->passwordReset()
-                ->emailVerification()
-                ->pages([
-                    Pages\Dashboard::class,
-                ])
-                ->widgets([
-                    Widgets\AccountWidget::class,
-                    Widgets\FilamentInfoWidget::class,
-                ])
-                ->middleware($middleware)
+            false => $panel
                 ->authMiddleware([
                     Authenticate::class,
                 ])
-                ->tenant(Site::class, slugAttribute: 'domain')
-                ->tenantDomain('{tenant:domain}')
-                ->tenantMenu(false)
                 ->renderHook(
                     PanelsRenderHook::HEAD_START,
                     fn (): string => self::getThemeIsolationScript(self::PANEL_ID)
