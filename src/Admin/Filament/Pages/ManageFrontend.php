@@ -22,9 +22,17 @@ class ManageFrontend extends SettingsPage
     {
         return $form
             ->schema([
-                Components\Toggle::make('guest_access')
-                    ->label('Enable guest access')
-                    ->helperText('If enabled, users will not be required to login to access the frontend.'),
+                Components\Section::make('User access')->schema([
+                    Components\Toggle::make('guest_access')
+                        ->label('Enable guest access')
+                        ->helperText('If enabled, users will not be required to login to access the frontend.'),
+                    Components\Toggle::make('enable_logins')
+                        ->label('Enable user logins')
+                        ->helperText('If enabled, users will be able to login and manage their user account.'),
+                    Components\Toggle::make('allow_registration')
+                        ->label('Allow user registrations')
+                        ->helperText('Allow new users to register on this site.'),
+                ]),
             ]);
     }
 
