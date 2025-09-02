@@ -7,6 +7,7 @@ use Eclipse\Common\Providers\GlobalSearchProvider;
 use Eclipse\Core\Models\Site;
 use Eclipse\Core\Services\Registry;
 use Eclipse\Frontend\Filament\Pages as CustomPages;
+use Eclipse\Frontend\Settings\FrontendSettings;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -34,6 +35,9 @@ class FrontendPanelProvider extends PanelProvider
 
     public function panel(Panel $panel): Panel
     {
+        /** @var FrontendSettings $settings */
+        $settings = app(FrontendSettings::class);
+
         $middleware = [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
@@ -48,7 +52,7 @@ class FrontendPanelProvider extends PanelProvider
         $widgets = [];
         $pages = [];
 
-        if (self::isGuestPanel()) {
+        if ($settings->allow_guests) {
             $middleware[] = AuthenticateSession::class;
             $pages[] = CustomPages\Home::class;
         } else {
@@ -95,7 +99,7 @@ class FrontendPanelProvider extends PanelProvider
                 EnvironmentIndicatorPlugin::make(),
             ], app(Registry::class)->getPlugins()));
 
-        match (self::isGuestPanel()) {
+        match ($settings->allow_guests) {
             true => $panel
                 ->renderHook(
                     PanelsRenderHook::TOPBAR_END,
@@ -132,10 +136,5 @@ class FrontendPanelProvider extends PanelProvider
                 });
             });
         </script>";
-    }
-
-    private static function isGuestPanel(): bool
-    {
-        return config('frontend-panel.guest_access');
     }
 }
