@@ -2,9 +2,11 @@
 
 namespace Eclipse\Frontend\Providers;
 
+use BezhanSalleh\FilamentShield\Middleware\SyncShieldTenant;
 use Eclipse\Common\Providers\GlobalSearchProvider;
 use Eclipse\Core\Models\Site;
 use Eclipse\Core\Services\Registry;
+use Eclipse\Frontend\Filament\Pages as CustomPages;
 use Eclipse\Frontend\Filament\Pages\Auth\Login;
 use Eclipse\Frontend\Http\Middleware\RedirectAfterLogin;
 use Filament\Http\Middleware\Authenticate;
@@ -17,6 +19,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Platform;
 use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -26,7 +29,6 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use pxlrbt\FilamentEnvironmentIndicator\EnvironmentIndicatorPlugin;
-use Filament\View\PanelsRenderHook;
 
 class FrontendPanelProvider extends PanelProvider
 {
@@ -34,7 +36,33 @@ class FrontendPanelProvider extends PanelProvider
 
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        $middleware = [
+            EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
+            StartSession::class,
+            ShareErrorsFromSession::class,
+            VerifyCsrfToken::class,
+            SubstituteBindings::class,
+            DisableBladeIconComponents::class,
+            DispatchServingFilamentEvent::class,
+        ];
+
+        $widgets = [];
+        $pages = [];
+
+        if ($this->allowGuestAccess()) {
+            $middleware[] = AuthenticateSession::class;
+            $pages[] = CustomPages\Home::class;
+        } else {
+            $middleware[] = RedirectAfterLogin::class;
+            $widgets = array_merge($widgets, [
+                Widgets\AccountWidget::class,
+                Widgets\FilamentInfoWidget::class,
+            ]);
+            $pages[] = Pages\Dashboard::class;
+        }
+
+        $panel
             ->id(self::PANEL_ID)
             ->path('')
             ->login(Login::class)
@@ -46,57 +74,54 @@ class FrontendPanelProvider extends PanelProvider
             ])
             ->authGuard(self::PANEL_ID)
             ->topNavigation()
-            ->brandName(fn() => Registry::getSite()->name)
+            ->brandName(fn () => Registry::getSite()->name)
             ->discoverResources(in: app_path('Filament/Frontend/Resources'), for: 'App\\Filament\\Frontend\\Resources')
             ->discoverPages(in: app_path('Filament/Frontend/Pages'), for: 'App\\Filament\\Frontend\\Pages')
-            ->pages([
-                Pages\Dashboard::class,
-            ])
             ->discoverWidgets(in: app_path('Filament/Frontend/Widgets'), for: 'App\\Filament\\Frontend\\Widgets')
-            ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
-            ])
-            ->middleware([
-                EncryptCookies::class,
-                AddQueuedCookiesToResponse::class,
-                StartSession::class,
-                AuthenticateSession::class,
-                ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
-                SubstituteBindings::class,
-                DisableBladeIconComponents::class,
-                DispatchServingFilamentEvent::class,
-                RedirectAfterLogin::class
-            ])
-            ->authMiddleware([
-                Authenticate::class,
-            ])
+            ->pages($pages)
             ->globalSearch(GlobalSearchProvider::class)
             ->globalSearchKeyBindings(['ctrl+k', 'command+k'])
-            ->globalSearchFieldSuffix(fn(): ?string => match (Platform::detect()) {
+            ->globalSearchFieldSuffix(fn (): ?string => match (Platform::detect()) {
                 Platform::Windows, Platform::Linux => 'CTRL+K',
                 Platform::Mac => '⌘K',
                 default => null,
             })
             ->tenant(Site::class, slugAttribute: 'domain')
             ->tenantDomain('{tenant:domain}')
+            ->tenantMiddleware([
+                SyncShieldTenant::class,
+            ], isPersistent: true)
             ->tenantMenu(false)
-            ->plugins([
+            ->widgets($widgets)
+            ->middleware($middleware)
+            ->plugins(array_merge([
                 EnvironmentIndicatorPlugin::make(),
-            ])
-            ->renderHook(
-                PanelsRenderHook::HEAD_START,
-                fn(): string => self::getThemeIsolationScript(self::PANEL_ID)
-            )
-            ;
+            ], app(Registry::class)->getPlugins()));
+
+        match ($this->allowGuestAccess()) {
+            true => $panel
+                ->renderHook(
+                    PanelsRenderHook::TOPBAR_END,
+                    fn () => view('frontend-panel::filament.components.theme-switcher')
+                ),
+            false => $panel
+                ->authMiddleware([
+                    Authenticate::class,
+                ])
+                ->renderHook(
+                    PanelsRenderHook::HEAD_START,
+                    fn (): string => self::getThemeIsolationScript(self::PANEL_ID)
+                )
+        };
+
+        return $panel;
     }
 
     public function register(): void
     {
         parent::register();
 
-        FilamentView::registerRenderHook('panels::body.end', fn(): string => Blade::render("@vite('resources/js/app.js')"));
+        FilamentView::registerRenderHook('panels::body.end', fn (): string => Blade::render("@vite('resources/js/app.js')"));
     }
 
     private static function getThemeIsolationScript(string $panelId): string
@@ -111,5 +136,10 @@ class FrontendPanelProvider extends PanelProvider
                 });
             });
         </script>";
+    }
+
+    private function allowGuestAccess(): bool
+    {
+        return config('frontend-panel.guest_access');
     }
 }

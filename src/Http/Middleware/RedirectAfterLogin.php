@@ -12,7 +12,7 @@ class RedirectAfterLogin
         if ($request->routeIs('filament.frontend.auth.login')) {
             session()->put('url.intended', '/');
         }
-        
+
         return $next($request);
     }
 }
