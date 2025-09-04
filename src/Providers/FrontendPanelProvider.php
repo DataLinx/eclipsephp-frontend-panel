@@ -7,6 +7,8 @@ use Eclipse\Common\Providers\GlobalSearchProvider;
 use Eclipse\Core\Models\Site;
 use Eclipse\Core\Services\Registry;
 use Eclipse\Frontend\Filament\Pages as CustomPages;
+use Eclipse\Frontend\Filament\Pages\Auth\Login;
+use Eclipse\Frontend\Http\Middleware\RedirectAfterLogin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -52,6 +54,7 @@ class FrontendPanelProvider extends PanelProvider
             $middleware[] = AuthenticateSession::class;
             $pages[] = CustomPages\Home::class;
         } else {
+            $middleware[] = RedirectAfterLogin::class;
             $widgets = array_merge($widgets, [
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
@@ -62,7 +65,7 @@ class FrontendPanelProvider extends PanelProvider
         $panel
             ->id(self::PANEL_ID)
             ->path('')
-            ->login()
+            ->login(Login::class)
             ->passwordReset()
             ->emailVerification()
             ->colors([
@@ -117,6 +120,7 @@ class FrontendPanelProvider extends PanelProvider
     public function register(): void
     {
         parent::register();
+
         FilamentView::registerRenderHook('panels::body.end', fn (): string => Blade::render("@vite('resources/js/app.js')"));
     }
 
